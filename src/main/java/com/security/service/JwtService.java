@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -23,15 +24,14 @@ public class JwtService {
 		Map<String, Object> claims = new HashMap<>();
 		return createToken(claims, username);
 	}
-	
+
 	public String extractUsername(String token) {
 		return extractClaim(token, Claims::getSubject);
 	}
-	
+
 	public Date extractExpiration(String token) {
 		return extractClaim(token, Claims::getExpiration);
 	}
-	
 
 	private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
 		final Claims claim = extractAllClaims(token);
@@ -39,7 +39,16 @@ public class JwtService {
 	}
 
 	private Claims extractAllClaims(String token) {
-		return null;
+		return Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody();
+	}
+
+	private Boolean isTokenExpired(String Token) {
+		return extractExpiration(Token).before(new Date());
+	}
+
+	public Boolean validateToken(String token, UserDetails userDetails) {
+		final String username = extractUsername(token);
+		return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
 	}
 
 	private String createToken(Map<String, Object> claims, String username) {
